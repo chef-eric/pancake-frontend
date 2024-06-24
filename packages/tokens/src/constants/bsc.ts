@@ -3197,4 +3197,12 @@ export const bscTokens = {
     'LayerZero',
     'https://www.layerzero.foundation/',
   ),
+  cat: new ERC20Token(
+    ChainId.BSC,
+    '0x59F4F336Bf3D0C49dBfbA4A74eBD2a6aCE40539A',
+    9,
+    'CAT',
+    'Catcoin',
+    'https://catcoin.com/',
+  ),
 }
