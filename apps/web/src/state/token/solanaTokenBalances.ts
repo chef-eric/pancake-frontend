@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 
 import BN from 'bignumber.js'
 import { atom, useAtomValue, useSetAtom } from 'jotai'
@@ -78,4 +78,17 @@ export function useSolanaTokenBalances(
     }
     return { balances: filtered, loading: false }
   }, [mintAddresses, state])
+}
+
+/**
+ * Hook to trigger a manual refresh of Solana token balances.
+ * It simply increments the global refresh counter, causing
+ * any atoms that depend on it to re-fetch balances.
+ */
+export function useRefreshSolanaTokenBalances() {
+  const setCounter = useSetAtom(solanaTokenBalanceRefreshCounterAtom)
+
+  return useCallback(() => {
+    setCounter((c) => c + 1)
+  }, [setCounter])
 }
