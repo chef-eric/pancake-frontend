@@ -8,8 +8,8 @@ import { rpcUrlAtom } from '@pancakeswap/utils/user'
 
 import { fetchSolanaTokenBalances } from './solanaBalanceFetcher'
 
-// Global refresh counter for triggering balance updates
-export const solanaTokenBalanceRefreshCounterAtom = atom(0)
+// Refresh counter per wallet address for triggering balance updates
+export const solanaWalletBalanceRefreshCounterAtomFamily = atomFamily(() => atom(0))
 
 /**
  * AtomFamily that uses Jotai's dependency tracking with refresh capability.
@@ -20,8 +20,8 @@ const walletBalancesAtomFamily = atomFamily((walletAddress: string | null | unde
     atom(async (get) => {
       if (!walletAddress) return new Map<string, TokenAccount[]>()
 
-      // Add dependency on refresh counter to trigger updates
-      get(solanaTokenBalanceRefreshCounterAtom)
+      // Add dependency on wallet-specific refresh counter to trigger updates
+      get(solanaWalletBalanceRefreshCounterAtomFamily(walletAddress))
 
       const rpc = get(rpcUrlAtom)
       return fetchSolanaTokenBalances(walletAddress, rpc)
@@ -85,8 +85,8 @@ export function useSolanaTokenBalances(
  * It simply increments the global refresh counter, causing
  * any atoms that depend on it to re-fetch balances.
  */
-export function useRefreshSolanaTokenBalances() {
-  const setCounter = useSetAtom(solanaTokenBalanceRefreshCounterAtom)
+export function useRefreshSolanaTokenBalances(walletAddress?: string | null) {
+  const setCounter = useSetAtom(solanaWalletBalanceRefreshCounterAtomFamily(walletAddress ?? null))
 
   return useCallback(() => {
     setCounter((c) => c + 1)

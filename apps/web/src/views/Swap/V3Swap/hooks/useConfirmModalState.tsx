@@ -201,7 +201,7 @@ const useConfirmActions = (
   const { toastSuccess, toastError, toastInfo } = useToast()
 
   // Refresh function to update cached Solana balances after swap
-  const refreshSolanaBalances = useRefreshSolanaTokenBalances()
+  const refreshSolanaBalances = useRefreshSolanaTokenBalances(solanaWallet?.adapter.publicKey?.toBase58())
 
   const resetState = useCallback(() => {
     setConfirmState(ConfirmModalState.REVIEWING)
