@@ -1,21 +1,28 @@
 import { useMemo } from 'react'
 
 import BN from 'bignumber.js'
-import { atom, useAtomValue } from 'jotai'
+import { atom, useAtomValue, useSetAtom } from 'jotai'
 import { atomFamily, loadable } from 'jotai/utils'
 import { TokenAccount } from '@pancakeswap/solana-core-sdk'
 import { rpcUrlAtom } from '@pancakeswap/utils/user'
 
 import { fetchSolanaTokenBalances } from './solanaBalanceFetcher'
 
+// Global refresh counter for triggering balance updates
+export const solanaTokenBalanceRefreshCounterAtom = atom(0)
+
 /**
- * AtomFamily: caches all token balances for a wallet.
- * The value is a Map<string, BN> where key is mint address.
+ * AtomFamily that uses Jotai's dependency tracking with refresh capability.
+ * This atom family will re-fetch when refresh counter or RPC URL changes.
  */
 const walletBalancesAtomFamily = atomFamily((walletAddress: string | null | undefined) =>
   loadable(
     atom(async (get) => {
       if (!walletAddress) return new Map<string, TokenAccount[]>()
+
+      // Add dependency on refresh counter to trigger updates
+      get(solanaTokenBalanceRefreshCounterAtom)
+
       const rpc = get(rpcUrlAtom)
       return fetchSolanaTokenBalances(walletAddress, rpc)
     }),
@@ -23,15 +30,19 @@ const walletBalancesAtomFamily = atomFamily((walletAddress: string | null | unde
 )
 
 /**
- * Hook: get a single token's balance for a wallet.
- * Reuses the walletBalancesAtomFamily cache.
+ * useSolanaTokenBalance get a single token's balance for a wallet.
+ * There is no need to cache the balance of a single token
+ * because user want to see the latest balance as soon as possible.
+ * This balance will be refetched every 10 seconds.
+ *
+ * NOTE:
+ * If we want to use atom in the future, consider using atomWithQuery extension
  */
 export function useSolanaTokenBalance(
   walletAddress?: string | null,
   mintAddress?: string,
 ): { balance: BN; loading: boolean; error?: Error } {
-  const balancesAtom = useMemo(() => walletBalancesAtomFamily(walletAddress ?? null), [walletAddress])
-  const state = useAtomValue(balancesAtom)
+  const state = useAtomValue(walletBalancesAtomFamily(walletAddress))
   return useMemo(() => {
     if (!mintAddress) return { balance: new BN(0), loading: false }
     if (state.state === 'hasError') return { balance: new BN(0), loading: false, error: state.error as Error }
