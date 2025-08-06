@@ -808,44 +808,29 @@ const useConfirmActions = (
         }
 
         try {
-          const txs = Array.isArray(transaction) ? transaction : [transaction]
-          let lastSignature: string | undefined
-          for (const tx of txs) {
-            const based64tx = Buffer.from(tx, 'base64')
-            const versionedTransaction = VersionedTransaction.deserialize(new Uint8Array(based64tx))
-            // eslint-disable-next-line no-await-in-loop
-            const signedTransaction = await signTransaction(versionedTransaction)
-            const serializedTransaction = Buffer.from(signedTransaction.serialize()).toString('base64')
+          const based64tx = Buffer.from(transaction, 'base64')
+          const versionedTransaction = VersionedTransaction.deserialize(new Uint8Array(based64tx))
+          const signedTransaction = await signTransaction(versionedTransaction)
+          const serializedTransaction = Buffer.from(signedTransaction.serialize()).toString('base64')
 
-            // Submit swap to UltraSwapService
-            // eslint-disable-next-line no-await-in-loop
-            const response = await ultraSwapService.submitSwap(serializedTransaction, requestId)
+          // Submit swap to UltraSwapService
+          const response = await ultraSwapService.submitSwap(serializedTransaction, requestId)
 
-            if (response.status === 'Failed') {
-              const errorMsg = response.error || 'Solana swap failed'
-              if (errorMsg.toLowerCase().includes('slippage')) {
-                showError('Swap failed due to slippage error!')
-              } else {
-                showError(errorMsg)
-              }
-              return
-            }
-
-            lastSignature = response.signature
-            // wait for confirmation for each tx
-            // eslint-disable-next-line no-await-in-loop
-            await retryWaitForSolanaTransaction(response.signature)
+          if (response.status === 'Failed') {
+            const error = new UltraSwapError(response.error, UltraSwapErrorType.FAILED, response.signature)
+            showError(error.message || response.error || 'Solana swap failed')
+            return
           }
 
-          if (!lastSignature) return
-          setTxHash(lastSignature as any)
+          const { signature } = response
+          setTxHash(signature as any)
 
           // Log swap for analytics
           logSwap({
             tradeType: TradeType.EXACT_INPUT,
             account: solanaAccount ?? '0x',
             chainId: order.trade.inputAmount.currency.chainId,
-            hash: lastSignature as any,
+            hash: signature as any,
             inputAmount: order.trade.inputAmount.toExact(),
             outputAmount: order.trade.outputAmount.toExact(),
             input: order.trade.inputAmount.currency,
@@ -855,12 +840,13 @@ const useConfirmActions = (
 
           toastSuccess(
             t('Success!'),
-            <SolanaDescriptionWithTx txHash={lastSignature}>{t('Solana swap submitted')}</SolanaDescriptionWithTx>,
+            <SolanaDescriptionWithTx txHash={signature}>{t('Solana swap submitted')}</SolanaDescriptionWithTx>,
           )
 
           setConfirmState(ConfirmModalState.COMPLETED)
 
-          // Refresh balances after final confirmation
+          // Wait for transaction confirmation then refresh balances
+          await retryWaitForSolanaTransaction(signature)
           refreshSolanaBalances()
         } catch (error: any) {
           console.error('Solana swap error', error)
