@@ -1,15 +1,15 @@
 import React, { useCallback } from 'react'
-import { CircleInfo, Flex, Text, useToast } from '@pancakeswap/uikit'
+import { Button, Flex, InfoIcon, Text, useToast } from '@pancakeswap/uikit'
 import { useTranslation } from '@pancakeswap/localization'
-import { WSOLMint } from '@pancakeswap/solana-core-sdk'
-import { NonEVMChainId } from '@pancakeswap/chains'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { createCloseAccountInstruction } from '@solana/spl-token-0.4'
 import { Transaction } from '@solana/web3.js'
 import { useSolanaTokenBalance, useRefreshSolanaTokenBalances } from 'state/token/solanaTokenBalances'
 import { useSolanaConnectionWithRpcAtom } from 'hooks/solana/useSolanaConnectionWithRpcAtom'
 import useAccountActiveChain from 'hooks/useAccountActiveChain'
-import { useSwapCurrency } from '../../Swap/V3Swap/hooks/useSwapCurrency'
+import { NonEVMChainId } from '@pancakeswap/chains'
+import { WSOLMint } from '@pancakeswap/sdk'
+import { useSwapCurrency } from 'views/Swap/V3Swap/hooks/useSwapCurrency'
 
 export const UnwrapTips: React.FC = () => {
   const { t } = useTranslation()
@@ -50,21 +50,13 @@ export const UnwrapTips: React.FC = () => {
   if (!showUnwrapTip) return null
 
   return (
-    <Flex
-      mb="12px"
-      fontSize="14px"
-      alignItems="center"
-      px="8px"
-      py="8px"
-      backgroundColor="rgba(0,0,0,0.05)"
-      borderRadius="8px"
-    >
-      <CircleInfo mr="4px" />
+    <Flex mb="12px" alignItems="center" px="8px" py="8px" backgroundColor="rgba(0,0,0,0.05)" borderRadius="8px">
+      <InfoIcon mr="4px" />
       <Text>
         {t('You have %amount% WSOL that you can ', { amount: wsolBalance.dividedBy(1e9).toFixed(6) })}
-        <Text as="span" color="primary" cursor="pointer" onClick={handleUnwrap}>
+        <Button variant="textPrimary60" onClick={handleUnwrap}>
           {t('unwrap')}
-        </Text>
+        </Button>
       </Text>
     </Flex>
   )
