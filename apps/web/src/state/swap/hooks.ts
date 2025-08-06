@@ -128,7 +128,7 @@ export function queryParametersToSwapState(
 export function useDefaultsFromURLSearch():
   | { inputCurrencyId: string | undefined; outputCurrencyId: string | undefined }
   | undefined {
-  const { chainId } = useAccountActiveChain()
+  const { chainId } = useActiveChainId()
   const [, dispatch] = useAtom(swapReducerAtom)
   const native = useUnifiedNativeCurrency()
   const { query, pathname, isReady } = useRouter()
@@ -164,8 +164,6 @@ export function useDefaultsFromURLSearch():
 
     const isNotTwapOrLimitPath = !['twap', 'limit'].some((p) => pathname.includes(p))
 
-    let switchedToFallback = false
-
     // Set input currency to default (native currency) if chain is changed by user
     // and input currency is on different chain
     if (finalInputChainId && finalInputChainId !== chainId) {
@@ -189,7 +187,6 @@ export function useDefaultsFromURLSearch():
         finalOutputCurrencyId = defaultOutputCurrency
         finalOutputChainId = chainId
       }
-      switchedToFallback = true
     }
 
     if (finalOutputChainId && finalOutputChainId !== chainId) {
@@ -204,7 +201,6 @@ export function useDefaultsFromURLSearch():
         finalOutputCurrencyId = defaultOutputCurrency
         finalOutputChainId = chainId
       }
-      switchedToFallback = true
     }
 
     // If input and output currencies are the same, set output currency to native currency (other default currency)
@@ -214,7 +210,6 @@ export function useDefaultsFromURLSearch():
       } else {
         finalOutputCurrencyId = defaultOutputCurrency
       }
-      switchedToFallback = true
     }
 
     dispatch(
@@ -228,15 +223,6 @@ export function useDefaultsFromURLSearch():
         recipient: null,
       }),
     )
-
-    if (switchedToFallback) {
-      replaceBrowserHistoryMultiple({
-        inputCurrency: finalInputCurrencyId,
-        outputCurrency: finalOutputCurrencyId,
-        chain: CHAIN_QUERY_NAME[finalInputChainId || chainId],
-        chainOut: CHAIN_QUERY_NAME[finalOutputChainId || chainId],
-      })
-    }
 
     setResult({
       inputCurrencyId: finalInputCurrencyId,

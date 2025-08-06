@@ -43,6 +43,8 @@ import { useSecurityBlocking } from 'hooks/useSecurityBlocking'
 import { persistor, useStore } from 'state'
 import { usePollBlockNumber } from 'state/block/hooks'
 import { SolanaWalletModal } from 'wallet/SolanaWalletModal'
+import useAccountActiveChain from 'hooks/useAccountActiveChain'
+import { NonEVMChainId } from '@pancakeswap/chains'
 import { Blocklist, Updaters } from '..'
 import { SEO } from '../../next-seo.config'
 import Providers from '../Providers'
@@ -148,6 +150,7 @@ const ProductionErrorBoundary = process.env.NODE_ENV === 'production' ? SentryEr
 
 const App = ({ Component, pageProps }: AppPropsWithLayout) => {
   const blocking = useSecurityBlocking()
+  const { chainId } = useAccountActiveChain()
 
   if (blocking) {
     return null
@@ -162,6 +165,7 @@ const App = ({ Component, pageProps }: AppPropsWithLayout) => {
   const ShowMenu = Component.mp ? SharedComponentWithOutMenu : Menu
   const isShowScrollToTopButton = Component.isShowScrollToTopButton || true
   const shouldScreenWallet = Component.screen || false
+  const isBridge = typeof window !== 'undefined' && window.location.pathname.includes('/bridge')
 
   return (
     <ProductionErrorBoundary>
@@ -184,7 +188,7 @@ const App = ({ Component, pageProps }: AppPropsWithLayout) => {
         <SimpleStakingSunsetModal />
         <VercelToolbar />
         <Cb1Membership />
-        <SolanaWalletModal />
+        {(chainId === NonEVMChainId.SOLANA || isBridge) && <SolanaWalletModal />}
       </Suspense>
     </ProductionErrorBoundary>
   )

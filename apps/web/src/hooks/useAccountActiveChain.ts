@@ -37,7 +37,7 @@ export const useActiveChainId = (checkChainId?: number) => {
   return {
     chainId,
     isNotMatched,
-    isWrongNetwork: isWrongNetwork ? Boolean(checkChainId && checkChainId !== chainId) : false,
+    isWrongNetwork: checkChainId ? isWrongNetwork && checkChainId !== chainId : isWrongNetwork,
   }
 }
 
@@ -84,7 +84,7 @@ export function useSyncWalletState() {
   // wagmi change
   useValueChanged(() => {
     const { chainId: wagmiChainId } = wagmiAccountState
-    if (wagmiChainId) {
+    if (wagmiChainId && isEvm(queryChainId)) {
       switchNetwork(wagmiChainId)
     }
   }, [wagmiAccountState])

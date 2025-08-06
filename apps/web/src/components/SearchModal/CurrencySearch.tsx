@@ -18,7 +18,7 @@ import { NonEVMChainId, UnifiedChainId } from '@pancakeswap/chains'
 import { useDebounce, useSortedTokensByQuery } from '@pancakeswap/hooks'
 import { useTranslation } from '@pancakeswap/localization'
 /* eslint-disable no-restricted-syntax */
-import { ChainId, getTokenComparator, Token, UnifiedCurrency } from '@pancakeswap/sdk'
+import { ChainId, ERC20Token, getTokenComparator, isSolWSol, Token, UnifiedCurrency } from '@pancakeswap/sdk'
 import { createFilterToken, WrappedTokenInfo } from '@pancakeswap/token-lists'
 import {
   AutoColumn,
@@ -35,7 +35,7 @@ import {
 } from '@pancakeswap/uikit'
 import { useAudioPlay } from '@pancakeswap/utils/user'
 import { useSolanaTokenBalances } from 'state/token/solanaTokenBalances'
-import { SPLToken } from '@pancakeswap/swap-sdk-core'
+import { SPLToken, UnifiedToken } from '@pancakeswap/swap-sdk-core'
 
 import { useAllTokens, useIsUserAddedToken, useToken } from '../../hooks/Tokens'
 import Row from '../Layout/Row'
@@ -43,7 +43,6 @@ import CommonBases, { BaseWrapper } from './CommonBases'
 import CurrencyList from './CurrencyList'
 import { CurrencySearchInput } from './CurrencySearchInput'
 import ImportRow from './ImportRow'
-import SolanaImportRow from './SolanaImportRow'
 import SwapNetworkSelection from './SwapNetworkSelection'
 import { getSwapSound } from './swapSound'
 import { CommonBasesType } from './types'
@@ -56,7 +55,7 @@ interface CurrencySearchProps {
   showCommonBases?: boolean
   commonBasesType?: CommonBasesType
   showImportView: () => void
-  setImportToken: (token: Token) => void
+  setImportToken: (token: UnifiedToken) => void
   height?: number
   tokensToShow?: Token[]
   showChainLogo?: boolean
@@ -185,17 +184,19 @@ function CurrencySearch({
     if (isSolana) {
       // Simple search for Solana tokens
       const s = debouncedQuery.toLowerCase().trim()
+      const otherIsSol = isSolWSol(otherSelectedCurrency)
       return solanaTokens.filter(
         (token) =>
-          token.symbol.toLowerCase().includes(s) ||
-          token.name?.toLowerCase().includes(s) ||
-          token.address.toLowerCase() === s,
+          (token.symbol.toLowerCase().includes(s) ||
+            token.name?.toLowerCase().includes(s) ||
+            token.address.toLowerCase() === s) &&
+          !(otherIsSol && isSolWSol(token)),
       )
     }
     const filterToken = createFilterToken(debouncedQuery, (address) => isAddress(address))
     // Only EVM tokens here
     return Object.values(tokensToShow || allTokens).filter(filterToken) as Token[]
-  }, [tokensToShow, allTokens, debouncedQuery, isSolana, solanaTokens])
+  }, [tokensToShow, allTokens, debouncedQuery, isSolana, solanaTokens, otherSelectedCurrency])
 
   const queryTokens = useSortedTokensByQuery(filteredTokens as Token[], debouncedQuery)
 
@@ -263,22 +264,13 @@ function CurrencySearch({
     if (searchToken && !searchTokenIsAdded && !hasFilteredInactiveTokens) {
       return (
         <Column style={{ padding: '20px 0', height: '100%' }}>
-          {isSolana ? (
-            <SolanaImportRow
-              token={searchToken as SPLToken}
-              onCurrencySelect={handleCurrencySelect as (c: SPLToken) => void}
-              showImportView={showImportView}
-              setImportToken={setImportToken as unknown as (t: SPLToken) => void}
-            />
-          ) : (
-            <ImportRow
-              chainId={selectedChainId}
-              onCurrencySelect={handleCurrencySelect}
-              token={searchToken}
-              showImportView={showImportView}
-              setImportToken={setImportToken}
-            />
-          )}
+          <ImportRow
+            chainId={selectedChainId}
+            onCurrencySelect={handleCurrencySelect}
+            token={searchToken}
+            showImportView={showImportView}
+            setImportToken={setImportToken}
+          />
         </Column>
       )
     }
@@ -289,13 +281,7 @@ function CurrencySearch({
           height={isMobile ? (showCommonBases ? height || 250 : height ? height + 80 : 350) : 340}
           showNative={showNative}
           currencies={filteredSortedTokens}
-          inactiveCurrencies={
-            isSolana
-              ? filteredInactiveTokens
-              : filteredInactiveTokens.filter(
-                  (t) => t && typeof t === 'object' && 'equals' in t && typeof t.equals === 'function',
-                )
-          }
+          inactiveCurrencies={filteredInactiveTokens}
           breakIndex={
             Boolean(filteredInactiveTokens?.length) && filteredSortedTokens ? filteredSortedTokens.length : undefined
           }
@@ -334,7 +320,6 @@ function CurrencySearch({
     height,
     showChainLogo,
     selectedChainId,
-    isSolana,
   ])
 
   return (

@@ -22,12 +22,13 @@ import { useActiveChainId, useLocalNetworkChain } from 'hooks/useActiveChainId'
 import { useHover } from 'hooks/useHover'
 import { useSwitchNetwork } from 'hooks/useSwitchNetwork'
 import useTheme from 'hooks/useTheme'
-import { atom, useAtom } from 'jotai'
+import { atom, useAtom, useSetAtom } from 'jotai'
 import { useRouter } from 'next/router'
 import { useCallback, useMemo } from 'react'
 import { useUserShowTestnet } from 'state/user/hooks/useUserShowTestnet'
 import { useAccount } from 'wagmi'
 import { SOLANA_SUPPORTED_PATH } from 'wallet/solana.config'
+import { accountActiveChainAtom } from 'hooks/useAccountActiveChain'
 import { ChainLogo } from './Logo/ChainLogo'
 
 type ChainSpecificBehavior = {
@@ -73,7 +74,7 @@ const NetworkSelect = ({ switchNetwork, chainId, isWrongNetwork, onDismiss }: Ne
           if (!SOLANA_SUPPORTED_PATH.includes(router.pathname)) {
             window.open('https://solana.pancakeswap.finance', '_self')
           } else {
-            router.replace({ query: { ...router.query, chain: 'solana' } }, undefined, { shallow: true })
+            switchNetwork(NonEVMChainId.SOLANA)
           }
           onDismiss()
         },
@@ -85,7 +86,7 @@ const NetworkSelect = ({ switchNetwork, chainId, isWrongNetwork, onDismiss }: Ne
         },
       },
     }),
-    [router, onDismiss],
+    [router, onDismiss, switchNetwork],
   )
   const networks = useMemo(() => getSortedChains(chainId, showTestnet), [chainId, showTestnet])
 
