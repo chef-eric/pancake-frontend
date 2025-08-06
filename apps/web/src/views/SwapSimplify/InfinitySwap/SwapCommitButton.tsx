@@ -1,17 +1,5 @@
 import { Currency, CurrencyAmount } from '@pancakeswap/swap-sdk-core'
-import {
-  AutoColumn,
-  Box,
-  Button,
-  Dots,
-  Message,
-  MessageText,
-  Text,
-  useModal,
-  Flex,
-  CircleInfo,
-  useToast,
-} from '@pancakeswap/uikit'
+import { AutoColumn, Button, Dots, Message, MessageText, Text, useModal } from '@pancakeswap/uikit'
 import { useAddressBalance } from 'hooks/useAddressBalance'
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -63,13 +51,6 @@ import { useAccount } from 'wagmi'
 import useAccountActiveChain from 'hooks/useAccountActiveChain'
 import { isEvm, NonEVMChainId } from '@pancakeswap/chains'
 import SolanaConnectButton from 'wallet/components/SolanaConnectButton'
-
-import { WSOLMint } from '@pancakeswap/solana-core-sdk'
-import { useWallet } from '@solana/wallet-adapter-react'
-import { createCloseAccountInstruction } from '@solana/spl-token-0.4'
-import { Transaction } from '@solana/web3.js'
-import { useSolanaTokenBalance, useRefreshSolanaTokenBalances } from 'state/token/solanaTokenBalances'
-import { useSolanaConnectionWithRpcAtom } from 'hooks/solana/useSolanaConnectionWithRpcAtom'
 
 import { ConfirmSwapModalV3 } from '../../Swap/Bridge/CrossChainConfirmSwapModal/ConfirmSwapModalV3'
 import { useParsedAmounts, useSlippageAdjustedAmounts, useSwapInputError } from '../../Swap/V3Swap/hooks'
@@ -184,12 +165,7 @@ const SwapCommitButtonInner = memo(function SwapCommitButtonInner({
 }: SwapCommitButtonPropsType & CommitButtonProps) {
   const { address: account } = useAccount()
   const { t } = useTranslation()
-  const { chainId, solanaAccount } = useAccountActiveChain()
-  const { publicKey, signTransaction } = useWallet()
-  const connection = useSolanaConnectionWithRpcAtom()
-  const { balance: wsolBalance } = useSolanaTokenBalance(solanaAccount, WSOLMint.toBase58())
-  const refreshSolanaBalances = useRefreshSolanaTokenBalances(solanaAccount)
-  const { toastSuccess, toastError } = useToast()
+  const { chainId } = useAccountActiveChain()
   // form data
   const { independentField, typedValue } = useSwapState()
   const [inputCurrency, outputCurrency] = useSwapCurrency()
@@ -262,28 +238,6 @@ const SwapCommitButtonInner = memo(function SwapCommitButtonInner({
   const handleAcceptChanges = useCallback(() => {
     setTradeToConfirm(order)
   }, [order])
-
-  const handleUnwrap = useCallback(async () => {
-    try {
-      if (!publicKey || !signTransaction) throw new Error('Wallet not connected')
-      const accounts = await connection.getTokenAccountsByOwner(publicKey, { mint: WSOLMint })
-      if (accounts.value.length === 0) return
-      const tx = new Transaction()
-      accounts.value.forEach(({ pubkey }) => {
-        tx.add(createCloseAccountInstruction(pubkey, publicKey, publicKey))
-      })
-      tx.feePayer = publicKey
-      const { blockhash } = await connection.getLatestBlockhash()
-      tx.recentBlockhash = blockhash
-      const signed = await signTransaction(tx)
-      const sig = await connection.sendRawTransaction(signed.serialize())
-      await connection.confirmTransaction(sig)
-      toastSuccess(t('Success!'), t('Unwrapped WSOL to SOL'))
-      refreshSolanaBalances()
-    } catch (e: any) {
-      toastError(t('Failed'), e?.message ?? 'Unwrap failed')
-    }
-  }, [publicKey, signTransaction, connection, toastSuccess, toastError, t, refreshSolanaBalances])
 
   const hasNoValidRouteError = useMemo(() => Boolean(tradeError && isSupportedErrorType(tradeError)), [tradeError])
 
@@ -502,43 +456,18 @@ const SwapCommitButtonInner = memo(function SwapCommitButtonInner({
     return <ResetRoutesButton />
   }
 
-  const showUnwrapTip = isSVMOrder(order) && wsolBalance.gt(0)
-
   return (
-    <Box mt="0.25rem">
-      {showUnwrapTip && (
-        <Flex
-          mb="12px"
-          fontSize="14px"
-          alignItems="center"
-          px="8px"
-          py="8px"
-          backgroundColor="rgba(0,0,0,0.05)"
-          borderRadius="8px"
-        >
-          <CircleInfo mr="4px" />
-          <Text>
-            {t('You have %amount% WSOL that you can ', {
-              amount: wsolBalance.dividedBy(1e9).toFixed(6),
-            })}
-            <Text as="span" color="primary" cursor="pointer" onClick={handleUnwrap}>
-              {t('unwrap')}
-            </Text>
-          </Text>
-        </Flex>
-      )}
-      <CommitButton
-        id="swap-button"
-        width="100%"
-        data-dd-action-name="Swap commit button"
-        variant={isValid && priceImpactSeverity > 2 && !errorMessage ? 'danger' : 'primary'}
-        disabled={disabled}
-        onClick={handleSwap}
-        checkChainId={isValid ? inputCurrency?.chainId : undefined}
-      >
-        {buttonText}
-      </CommitButton>
-    </Box>
+    <CommitButton
+      id="swap-button"
+      width="100%"
+      data-dd-action-name="Swap commit button"
+      variant={isValid && priceImpactSeverity > 2 && !errorMessage ? 'danger' : 'primary'}
+      disabled={disabled}
+      onClick={handleSwap}
+      checkChainId={isValid ? inputCurrency?.chainId : undefined}
+    >
+      {buttonText}
+    </CommitButton>
   )
 })
 
