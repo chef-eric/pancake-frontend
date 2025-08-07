@@ -216,8 +216,8 @@ function CurrencySearch({
       return [...filteredTokens].sort((a, b) => {
         const balA = solanaBalances.balances.get(a.address) ?? new BN(0)
         const balB = solanaBalances.balances.get(b.address) ?? new BN(0)
-        const priceA = solanaPrices?.[`${NonEVMChainId.SOLANA}-${a.address}`] ?? 0
-        const priceB = solanaPrices?.[`${NonEVMChainId.SOLANA}-${b.address}`] ?? 0
+        const priceA = solanaPrices?.[a.address] ?? 0
+        const priceB = solanaPrices?.[b.address] ?? 0
         const usdA = balA.multipliedBy(priceA)
         const usdB = balB.multipliedBy(priceB)
         if (!usdA.eq(usdB)) {
