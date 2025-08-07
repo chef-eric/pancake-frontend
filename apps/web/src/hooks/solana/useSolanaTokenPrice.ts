@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useAtomValue } from 'jotai'
 import { atomFamily } from 'jotai/utils'
 import { atomWithLoadable } from 'quoter/atom/atomWithLoadable'
-import { DeepKeyMap, isEqual } from 'utils/hash'
+import { isEqual } from 'utils/hash'
 
 import { PublicKey } from '@solana/web3.js'
 
@@ -16,33 +16,24 @@ interface SolanaTokenPriceParams {
   version: number
 }
 
-const placeHolderMap = new DeepKeyMap<SolanaTokenPriceParams, PriceReturnType>()
-
 const solanaTokenPriceAtom = atomFamily((params: SolanaTokenPriceParams) => {
-  return atomWithLoadable(
-    async () => {
-      const { mint, enabled } = params
-      if (!enabled || !mint) {
-        return undefined
-      }
-      const response = await fetch(`${WALLET_PRICE_URL}/${mint}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch price')
-      }
-      const resp: PriceReturnType = await response.json()
-      const result = Object.entries(resp).reduce((acc, [key, val]) => {
-        // eslint-disable-next-line no-param-reassign
-        acc[key.split('-')[1] ?? key] = val
-        return acc
-      }, {} as PriceReturnType)
-      placeHolderMap.set({ ...params, version: 0 }, result)
-      return result
-    },
-    {
-      placeHolderBehavior: 'stale',
-      placeHolderValue: placeHolderMap.get({ ...params, version: 0 }),
-    },
-  )
+  return atomWithLoadable(async () => {
+    const { mint, enabled } = params
+    if (!enabled || !mint) {
+      return undefined
+    }
+    const response = await fetch(`${WALLET_PRICE_URL}/${mint}`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch price')
+    }
+    const resp: PriceReturnType = await response.json()
+    const result = Object.entries(resp).reduce((acc, [key, val]) => {
+      // eslint-disable-next-line no-param-reassign
+      acc[key.split('-')[1] ?? key] = val
+      return acc
+    }, {} as PriceReturnType)
+    return result
+  })
 }, isEqual)
 
 export const useSolanaTokenPrice = (props: {
@@ -76,17 +67,11 @@ export const useSolanaTokenPrices = (props: {
   enabled?: boolean
 }) => {
   const { mints, refreshInterval = 2 * 60 * 1000, enabled = true } = props || {}
-
-  const readyList = useMemo(
-    () => Array.from(new Set(mints.filter((m): m is string => !!m && typeof m === 'string' && m.length === 44))),
-    [mints],
-  )
-  const joined = readyList.join(',')
-
+  const readyList = useMemo(() => Array.from(new Set(mints.filter((m): m is string => !!m))).join(','), [mints])
   const version = Math.floor(Date.now() / refreshInterval)
 
   const loadable = useAtomValue(
-    solanaTokenPriceAtom({ mint: joined || undefined, enabled: enabled && joined.length > 0, version }),
+    solanaTokenPriceAtom({ mint: readyList || undefined, enabled: enabled && readyList.length > 0, version }),
   )
 
   const data = loadable.unwrapOr({})
