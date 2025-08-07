@@ -6,7 +6,7 @@ import { useUnifiedNativeCurrency } from 'hooks/useNativeCurrency'
 import { useSolanaTokenList } from 'hooks/solana/useSolanaTokenList'
 import { useSolanaTokenInfo } from 'hooks/solana/useSolanaTokenInfo'
 import { useSolanaTokenBalances } from 'state/token/solanaTokenBalances'
-import { useSolanaTokenPrice } from 'hooks/solana/useSolanaTokenPrice'
+import { useSolanaTokenPrices } from 'hooks/solana/useSolanaTokenPrice'
 import BN from 'bignumber.js'
 import { FixedSizeList } from 'react-window'
 import { useAllLists, useInactiveListUrls } from 'state/lists/hooks'
@@ -164,8 +164,8 @@ function CurrencySearch({
     () => tokenAddresses.filter((addr) => solanaBalances.balances.get(addr)?.gt(0)),
     [tokenAddresses, solanaBalances.balances],
   )
-  const { data: solanaPrices } = useSolanaTokenPrice({
-    mintList: tokenAddressesWithBalance,
+  const { data: solanaPrices } = useSolanaTokenPrices({
+    mints: tokenAddressesWithBalance,
     enabled: isSolana && tokenAddressesWithBalance.length > 0,
   })
 

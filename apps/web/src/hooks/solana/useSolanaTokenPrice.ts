@@ -4,7 +4,6 @@ import { atomFamily } from 'jotai/utils'
 import { atomWithLoadable } from 'quoter/atom/atomWithLoadable'
 import { DeepKeyMap, isEqual } from 'utils/hash'
 
-import { WSOLMint } from '@pancakeswap/solana-core-sdk'
 import { PublicKey } from '@solana/web3.js'
 
 const WALLET_PRICE_URL = 'https://wallet-api.pancakeswap.com/sol/v1/prices/list'
@@ -35,7 +34,7 @@ const solanaTokenPriceAtom = atomFamily((params: SolanaTokenPriceParams) => {
         // eslint-disable-next-line no-param-reassign
         acc[key.split('-')[1] ?? key] = val
         return acc
-      }, {})
+      }, {} as PriceReturnType)
       placeHolderMap.set({ ...params, version: 0 }, result)
       return result
     },
@@ -64,6 +63,39 @@ export const useSolanaTokenPrice = (props: {
 
   return {
     data: mint ? data[mint?.toLowerCase()] : undefined,
+    isLoading,
+    error,
+    isEmptyResult,
+  }
+}
+
+export const useSolanaTokenPrices = (props: {
+  mints: (string | PublicKey | undefined)[]
+  refreshInterval?: number
+  timeout?: number
+  enabled?: boolean
+}) => {
+  const { mints, refreshInterval = 2 * 60 * 1000, enabled = true } = props || {}
+
+  const readyList = useMemo(
+    () => Array.from(new Set(mints.filter((m): m is string => !!m && typeof m === 'string' && m.length === 44))),
+    [mints],
+  )
+  const joined = readyList.join(',')
+
+  const version = Math.floor(Date.now() / refreshInterval)
+
+  const loadable = useAtomValue(
+    solanaTokenPriceAtom({ mint: joined || undefined, enabled: enabled && joined.length > 0, version }),
+  )
+
+  const data = loadable.unwrapOr({})
+  const error = loadable.isFail() ? loadable.error : undefined
+  const isLoading = loadable.isPending()
+  const isEmptyResult = loadable.isNothing()
+
+  return {
+    data,
     isLoading,
     error,
     isEmptyResult,
