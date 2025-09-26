@@ -13,8 +13,7 @@ import { useStablecoinPriceAmount } from 'hooks/useStablecoinPrice'
 import { StablePair } from 'views/AddLiquidity/AddStableLiquidity/hooks/useStableLPDerivedMintInfo'
 
 import { FiatLogo } from 'components/Logo/CurrencyLogo'
-import { useCurrencyBalance } from 'state/wallet/hooks'
-import { useAccount } from 'wagmi'
+import { useUnifiedCurrencyBalance } from 'hooks/useUnifiedCurrencyBalance'
 import { CommonBasesType } from 'components/SearchModal/types'
 import CurrencySearchModal from '../SearchModal/CurrencySearchModal'
 
@@ -43,11 +42,11 @@ interface CurrencyInputPanelProps {
   lpPercent?: string
   label?: string
   onCurrencySelect?: (currency: UnifiedCurrency) => void
-  currency?: Currency | null
+  currency?: UnifiedCurrency | null
   disableCurrencySelect?: boolean
   hideBalance?: boolean
   pair?: Pair | StablePair | null
-  otherCurrency?: Currency | null
+  otherCurrency?: UnifiedCurrency | null
   id: string
   showCommonBases?: boolean
   commonBasesType?: CommonBasesType
@@ -93,9 +92,9 @@ const CurrencyInputPanel = memo(function CurrencyInputPanel({
   title,
   hideBalanceComp,
 }: CurrencyInputPanelProps) {
-  const { address: account } = useAccount()
-
-  const selectedCurrencyBalance = useCurrencyBalance(account ?? undefined, currency ?? undefined)
+  const selectedCurrencyBalance = useUnifiedCurrencyBalance(currency ?? undefined) as
+    | CurrencyAmount<Currency>
+    | undefined
   const { t } = useTranslation()
 
   const mode = id
